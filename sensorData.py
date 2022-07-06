@@ -18,33 +18,33 @@ class SensorData:
         self.event = Event()
         self.dataToSend = {}
 
-    def mockData(self):
+    def mock_data(self):
         bus100 = Sensor("100", randint(10, 60))
         bus101 = Sensor("101", randint(10, 60))
         bus102 = Sensor("102", randint(10, 60))
         bus103 = Sensor("103", randint(10, 60))
 
-        route1 = Station("100", randint(10, 15), int(time.time()), bus100)
-        route2 = Station("101", randint(10, 15), int(time.time()), bus101)
-        route3 = Station("102", randint(10, 15), int(time.time()), bus102)
-        route4 = Station("103", randint(10, 15), int(time.time()), bus103)
+        route1 = Station("Alexander Platz", randint(10, 15), time.time(), bus100)
+        route2 = Station("Friedrichstrasse", randint(10, 15), time.time(), bus101)
+        route3 = Station("Hackescher Markt", randint(10, 15), time.time(), bus102)
+        route4 = Station("Hauptbahnhof", randint(10, 15), time.time(), bus103)
         items = [route1, route2, route3, route4]
         return random.choice(items)
 
     def modify_variable(self, queue_out):
         while not self.event.wait(2):
-            currentRoute = self.mockData()
+            currentRoute = self.mock_data()
             queue_out.put(currentRoute)
         
     def displayData(self, queue):
         for sequence in itertools.count():
             data = queue.queue[0]
-            if data.dataFromSensor.routeId in self.dataToSend:
-                count = self.dataToSend.get(data.dataFromSensor.routeId)
+            if data.dataFromSensor.bus_id in self.dataToSend:
+                count = self.dataToSend.get(data.dataFromSensor.bus_id)
                 count += 1
-                self.dataToSend[data.dataFromSensor.routeId] = count
+                self.dataToSend[data.dataFromSensor.bus_id] = count
             else:
-                self.dataToSend[data.dataFromSensor.routeId] = 1
+                self.dataToSend[data.dataFromSensor.bus_id] = 1
             for k, v in self.dataToSend.items():
                 number = v
                 print ("{:<8} {:<15}".format(k, number))

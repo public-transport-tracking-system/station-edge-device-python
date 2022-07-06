@@ -40,6 +40,13 @@ sensorData = SensorData()
 #start data generation and display pending data
 sensorData.startDataGeneration(queue1)
 
+def display_information_on_screen(information):
+    print('Sending information to the server...')
+    print('...')
+    print('Arriving at Station: ', information.id, ' Bus: ', information.dataFromSensor.bus_id)
+    print('Avg bus speed: ', information.dataFromSensor.avSpeed)
+    print("Arriving at: ", information.sentAt)
+
 def displayData():
     _ = system('clear')
     for k, v in pendingDataToSent.items():
@@ -50,19 +57,21 @@ def read_data(queue, client, context, pendingDataToSent):
     for sequence in itertools.count():
         time.sleep(1)
         if not queue.empty():
+            print('Queue size (%s)', queue.qsize())
             currentRoute = queue.get()
-            request = str(currentRoute.dataFromSensor.routeId).encode()
-            pendingDataToSent[currentRoute.dataFromSensor.routeId] = sequence
+            request = str(currentRoute.dataFromSensor.bus_id).encode()
+            pendingDataToSent[currentRoute.dataFromSensor.bus_id] = sequence
             client.send(request)
+            display_information_on_screen(currentRoute)
 
             while True:
                 print("wait")
                 if (client.poll(REQUEST_TIMEOUT) & zmq.POLLIN) != 0:
                     reply = client.recv()
-                    if int(reply) == int(currentRoute.dataFromSensor.routeId):
+                    if int(reply) == int(currentRoute.dataFromSensor.bus_id):
                         json_data = json.dumps(currentRoute, default=vars)
-                        pendingDataToSent[currentRoute.dataFromSensor.routeId] = 0
-                        publisher.send_string(f"{currentRoute.dataFromSensor.routeId} {json_data}")
+                        pendingDataToSent[currentRoute.dataFromSensor.bus_id] = 0
+                        publisher.send_string(f"{currentRoute.dataFromSensor.bus_id} {json_data}")
                         logging.info("Server replied OK (%s)", reply)
                         break
                     else:
@@ -85,9 +94,9 @@ t2 = Thread(target=read_data, args=(queue1, client, context, pendingDataToSent))
 t2.start()
 # for sequence in itertools.count():
 #     currentRoute = SensorData.mockData()
-#     request = str(currentRoute.dataFromSensor.routeId).encode()
+#     request = str(currentRoute.dataFromSensor.bus_id).encode()
 #     # logging.info("Sending (%s)", request)
-#     pendingDataToSent[currentRoute.dataFromSensor.routeId] = sequence
+#     pendingDataToSent[currentRoute.dataFromSensor.bus_id] = sequence
 #     client.send(request)
 #     # logging.info(request)
 #     # logging.info(sequence)
@@ -96,14 +105,14 @@ t2.start()
 #         displayData()
 #         if (client.poll(REQUEST_TIMEOUT) & zmq.POLLIN) != 0:
 #             reply = client.recv()
-#             if int(reply) == int(currentRoute.dataFromSensor.routeId):
+#             if int(reply) == int(currentRoute.dataFromSensor.bus_id):
 #                 # logging.info("Publish")
 #                 json_data = json.dumps(currentRoute, default=vars)
 #                 # print(json_data)
 #                 # obj = json.loads(json_data)
 #                 # print(json_data)
-#                 pendingDataToSent[currentRoute.dataFromSensor.routeId] = 0
-#                 publisher.send_string(f"{currentRoute.dataFromSensor.routeId} {json_data}")
+#                 pendingDataToSent[currentRoute.dataFromSensor.bus_id] = 0
+#                 publisher.send_string(f"{currentRoute.dataFromSensor.bus_id} {json_data}")
 #                 # logging.info("Server replied OK (%s)", reply)
 #                 break
 #             else:
