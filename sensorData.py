@@ -37,17 +37,18 @@ class SensorData:
             queue_out.put(currentRoute)
         
     def displayData(self, queue):
-        for sequence in itertools.count():
-            data = queue.queue[0]
-            if data.dataFromSensor.bus_id in self.dataToSend:
-                count = self.dataToSend.get(data.dataFromSensor.bus_id)
-                count += 1
-                self.dataToSend[data.dataFromSensor.bus_id] = count
-            else:
-                self.dataToSend[data.dataFromSensor.bus_id] = 1
-            for k, v in self.dataToSend.items():
-                number = v
-                print ("{:<8} {:<15}".format(k, number))
+        if not queue.empty():
+            for sequence in itertools.count():
+                data = queue.queue[0]
+                if data.dataFromSensor.bus_id in self.dataToSend:
+                    count = self.dataToSend.get(data.dataFromSensor.bus_id)
+                    count += 1
+                    self.dataToSend[data.dataFromSensor.bus_id] = count
+                else:
+                    self.dataToSend[data.dataFromSensor.bus_id] = 1
+                for k, v in self.dataToSend.items():
+                    number = v
+                    print ("{:<8} {:<15}".format(k, number))
             
 
     def startDataGeneration(self, queue):
