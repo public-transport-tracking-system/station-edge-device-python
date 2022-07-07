@@ -1,21 +1,16 @@
 from random import *
 import random
-import time
 from Sensor import Sensor
 from Station import Station
 from threading import Thread, Event
 from queue import Queue
-import itertools
-import json
-import threading
-from os import system
-import sys
+import time
 
 
 class SensorData:
     def __init__(self):
         self = self
-        self.event = threading.Event()
+        self.event = Event()
         self.dataToSend = {}
         self.waitTime = 1
 

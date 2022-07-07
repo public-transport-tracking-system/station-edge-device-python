@@ -1,20 +1,13 @@
-#
-#  Lazy Pirate client
-#  Use zmq_poll to do a safe request-reply
-#  To run, start lpserver and then randomly kill/restart it
-#
-#   Author: Daniel Lundin <dln(at)eintr(dot)org>
-#
 import itertools
 import logging
 import sys
-import zmq
 import json
 from os import system
 from sensorData import SensorData
 from utils.RepeatTimer import RepeatTimer
+from utils.SocketService import SocketService
 from queue import Queue
-from threading import Thread, Event
+from threading import Thread
 import time
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
@@ -22,15 +15,8 @@ logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 REQUEST_TIMEOUT = 10000
 SERVER_ENDPOINT = "tcp://localhost:5555"
 
-context = zmq.Context()
-
 logging.info("Connecting to server…")
-client = context.socket(zmq.REQ)
-client.connect(SERVER_ENDPOINT)
-
-publisher = context.socket(zmq.PUB)
-publisher.connect("tcp://localhost:5556")
-publisher.bind("tcp://*:5556")
+sockService = SocketService()
 
 pendingDataToSent = {}
 dataGenerationQueue = Queue()
@@ -63,43 +49,35 @@ def displayData(queue, pendingDataToSent):
 timer = RepeatTimer(1,displayData, (dataDisplayQueue,pendingDataToSent))  
 timer.start()
 
-def read_data(queue, client, context, pendingDataToSent):
+def read_data(queue, pendingDataToSent):
     for sequence in itertools.count():
         time.sleep(1)
         if not queue.empty():
             currentRoute = queue.get()
             request = str(currentRoute.dataFromSensor.bus_id).encode()
-            client.send(request)
+            sockService.sendNewRequest(request)
             #display_information_on_screen(currentRoute)
             while True:
-                if (client.poll(REQUEST_TIMEOUT) & zmq.POLLIN) != 0:
-                    reply = client.recv()
+                if (sockService.shouldReadValue()) != 0:
+                    reply = sockService.retrieveValue()
                     if int(reply) == int(currentRoute.dataFromSensor.bus_id):
                         allInfoForRoute = pendingDataToSent[currentRoute.dataFromSensor.bus_id]
                         pendingDataToSent[currentRoute.dataFromSensor.bus_id] = []
                         json_data = json.dumps(allInfoForRoute, default=vars)
-                        publisher.send_string(f"{currentRoute.dataFromSensor.bus_id} {json_data}")
+                        #TODO: don't access the publisher directly
+                        sockService.publisher.send_string(f"{currentRoute.dataFromSensor.bus_id} {json_data}")
                         logging.info("Server replied OK (%s)", reply)
                         break
                     else:
                         logging.error("Malformed reply from server: %s", reply)
                         continue
-                logging.warning("No response from server")
-                client.setsockopt(zmq.LINGER, 0)
-                client.close()
-                
-                logging.info("Reconnecting to server…")
-                # Create new connection
-                client = context.socket(zmq.REQ)
-                client.connect(SERVER_ENDPOINT)
-                logging.info("Resending (%s)", request)
-                client.send(request)
+                sockService.configureRequestAfterTimeout(request)
+                client = sockService.client
 
 #wait for some data to be generated
 time.sleep(6)
-t2 = Thread(target=read_data, args=(dataGenerationQueue, client, context, pendingDataToSent))
+t2 = Thread(target=read_data, args=(dataGenerationQueue, pendingDataToSent))
 t2.start()
-
 
 time.sleep(10)
 sensorData.event.set()
@@ -109,14 +87,14 @@ sensorData.event.set()
 #     request = str(currentRoute.dataFromSensor.bus_id).encode()
 #     # logging.info("Sending (%s)", request)
 #     pendingDataToSent[currentRoute.dataFromSensor.bus_id] = sequence
-#     client.send(request)
+#     socketService.client.send(request)
 #     # logging.info(request)
 #     # logging.info(sequence)
 
 #     while True:
 #         displayData()
-#         if (client.poll(REQUEST_TIMEOUT) & zmq.POLLIN) != 0:
-#             reply = client.recv()
+#         if (socketService.client.poll(REQUEST_TIMEOUT) & zmq.POLLIN) != 0:
+#             reply = socketService.client.recv()
 #             if int(reply) == int(currentRoute.dataFromSensor.bus_id):
 #                 # logging.info("Publish")
 #                 json_data = json.dumps(currentRoute, default=vars)
@@ -135,8 +113,8 @@ sensorData.event.set()
 #         logging.warning("No response from server")
 
 #         # Socket is confused. Close and remove it.
-#         client.setsockopt(zmq.LINGER, 0)
-#         client.close()
+#         socketService.client.setsockopt(zmq.LINGER, 0)
+#         socketService.client.close()
 #         if retries_left == 0:
 #             context = zmq.Context()
 #             logging.error("Server seems to be offline, abandoning")
@@ -144,7 +122,7 @@ sensorData.event.set()
 
 #         logging.info("Reconnecting to server…")
 #         # Create new connection
-#         client = context.socket(zmq.REQ)
-#         client.connect(SERVER_ENDPOINT)
+#         socketService.client = context.socket(zmq.REQ)
+#         socketService.client.connect(SERVER_ENDPOINT)
 #         logging.info("Resending (%s)", request)
-#         client.send(request)
+#         socketService.client.send(request)
