@@ -12,9 +12,6 @@ import time
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 
-REQUEST_TIMEOUT = 10000
-SERVER_ENDPOINT = "tcp://localhost:5555"
-
 logging.info("Connecting to server…")
 sockService = SocketService()
 
