@@ -11,8 +11,6 @@ from threading import Thread
 import time
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
-
-logging.info("Connecting to server…")
 sockService = SocketService()
 
 pendingDataToSent = {}
@@ -62,7 +60,7 @@ def read_data(queue, pendingDataToSent):
                         pendingDataToSent[currentRoute.dataFromSensor.bus_id] = []
                         json_data = json.dumps(allInfoForRoute, default=vars)
                         #TODO: don't access the publisher directly
-                        sockService.publisher.send_string(f"{currentRoute.dataFromSensor.bus_id} {json_data}")
+                        sockService.publisher.send_string(f"{currentRoute.id}/{json_data}")
                         logging.info("Server replied OK (%s)", reply)
                         break
                     else:
@@ -72,9 +70,9 @@ def read_data(queue, pendingDataToSent):
                 client = sockService.client
 
 #wait for some data to be generated
-time.sleep(6)
+#time.sleep(6)
 t2 = Thread(target=read_data, args=(dataGenerationQueue, pendingDataToSent))
 t2.start()
 
-time.sleep(10)
+time.sleep(15)
 sensorData.event.set()
