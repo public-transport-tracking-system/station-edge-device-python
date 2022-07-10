@@ -4,13 +4,13 @@ import logging
 class SocketService:
     def __init__(self):
         self.REQUEST_TIMEOUT = 10000
-        self.SERVER_ENDPOINT = "tcp://127.0.0.1:5555"
+        self.SERVER_ENDPOINT = "tcp://35.195.73.122:5555"
         self.context = zmq.Context()
         logging.info("Connecting to server…")
         self.client = self.context.socket(zmq.REQ)
         self.client.connect(self.SERVER_ENDPOINT)
         self.publisher = self.context.socket(zmq.PUB)
-        self.publisher.connect("tcp://127.0.0.1:5556")
+        self.publisher.connect("tcp://35.195.73.122:5556")
     
     def configureRequestAfterTimeout(self, request):
         logging.warning("No response from server")
