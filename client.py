@@ -67,7 +67,6 @@ def read_data(queue, pendingDataToSent):
                         logging.error("Malformed reply from server: %s", reply)
                         continue
                 sockService.configureRequestAfterTimeout(request)
-                client = sockService.client
 
 #wait for some data to be generated
 #time.sleep(6)
