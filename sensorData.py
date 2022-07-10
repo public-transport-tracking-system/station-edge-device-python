@@ -20,8 +20,8 @@ class SensorData:
         bus102 = Sensor("102", randint(10, 60))
         bus103 = Sensor("103", randint(10, 60))
 
-        route1 = Station("1","Alexander Platz", randint(10, 15), time.time(), bus100)
-        route2 = Station("1","Alexander Platz", randint(10, 15), time.time(), bus101)
+        route1 = Station("1", "Alexander Platz", randint(10, 15), time.time(), bus100)
+        route2 = Station("1", "Alexander Platz", randint(10, 15), time.time(), bus101)
         route3 = Station("1", "Alexander Platz", randint(10, 15), time.time(), bus102)
         route4 = Station("1", "Alexander Platz", randint(10, 15), time.time(), bus103)
         items = [route1, route2, route3, route4]
