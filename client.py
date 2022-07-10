@@ -2,7 +2,7 @@ import itertools
 import logging
 import sys
 import json
-from os import system
+import os
 from sensorData import SensorData
 from utils.RepeatTimer import RepeatTimer
 from utils.SocketService import SocketService
@@ -14,6 +14,7 @@ logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 sockService = SocketService()
 
 pendingDataToSent = {}
+lastUpdatedRoute = {}
 dataGenerationQueue = Queue()
 dataDisplayQueue = Queue()
 
@@ -21,14 +22,8 @@ sensorData = SensorData()
 #start data generation and display pending data
 sensorData.startDataGeneration(dataGenerationQueue, dataDisplayQueue)
 
-def display_information_on_screen(information):
-    print('Sending information to the server...')
-    print('...')
-    print('Arriving at Station: ', information.id, ' Bus: ', information.dataFromSensor.bus_id)
-    print('Avg bus speed: ', information.dataFromSensor.avSpeed)
-    print("Arriving at: ", information.sentAt)
-
 def displayData(queue, pendingDataToSent):
+    os.system('clear')
     if not queue.empty():
         data = queue.get()
         if data.dataFromSensor.bus_id in pendingDataToSent:
@@ -37,9 +32,19 @@ def displayData(queue, pendingDataToSent):
             pendingDataToSent[data.dataFromSensor.bus_id] = pending
         else:
             pendingDataToSent[data.dataFromSensor.bus_id] = [data]
-    for k, v in pendingDataToSent.items():
-        number = len(v)
-        print ("{:<8} {:<15}".format(k, number))
+    for key, value in pendingDataToSent.items():
+        number = len(value)
+        if key in lastUpdatedRoute:
+            lastestKnowUpdate = lastUpdatedRoute[key]
+            diff_seconds = int(time.time() - lastestKnowUpdate)
+        else:
+            lastestKnowUpdate = 0
+            diff_seconds = -1
+        
+        if diff_seconds == -1:
+            print ("{:<8} {:<15} {:<15}".format(key, number, "pendingToSend"))
+        else:
+            print ("{:<8} {:<15} {:<15}".format(key, number, f"{diff_seconds} seconds ago"))
 
 timer = RepeatTimer(1,displayData, (dataDisplayQueue,pendingDataToSent))  
 timer.start()
@@ -49,9 +54,9 @@ def read_data(queue, pendingDataToSent):
         time.sleep(1)
         if not queue.empty():
             currentRoute = queue.get()
-            request = str(currentRoute.dataFromSensor.bus_id).encode()
+            request = str(f"{currentRoute.id}/{currentRoute.dataFromSensor.bus_id}")
             sockService.sendNewRequest(request)
-            #display_information_on_screen(currentRoute)
+            lastUpdatedRoute[currentRoute.dataFromSensor.bus_id] = int(time.time())
             while True:
                 if (sockService.shouldReadValue()) != 0:
                     reply = sockService.retrieveValue()
@@ -69,9 +74,17 @@ def read_data(queue, pendingDataToSent):
                 sockService.configureRequestAfterTimeout(request)
 
 #wait for some data to be generated
-#time.sleep(6)
 t2 = Thread(target=read_data, args=(dataGenerationQueue, pendingDataToSent))
 t2.start()
 
+def subscriber_data(pendingDataToSent):
+    for sequence in itertools.count():
+        station_id, bus_id, updatedTime = sockService.subscriber.recv_string().split("/")
+        lastUpdatedRoute[bus_id] = int(updatedTime)
+
+t3 = Thread(target=subscriber_data, args=(pendingDataToSent,))
+t3.start()
+
 time.sleep(15)
+# stop generating data after 15 seconds
 sensorData.event.set()
