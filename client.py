@@ -85,6 +85,6 @@ def subscriber_data(pendingDataToSent):
 t3 = Thread(target=subscriber_data, args=(pendingDataToSent,))
 t3.start()
 
-time.sleep(15)
-# stop generating data after 15 seconds
-sensorData.event.set()
+#time.sleep(15)
+## stop generating data after 15 seconds
+#sensorData.event.set()
